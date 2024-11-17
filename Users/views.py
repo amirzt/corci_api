@@ -2,15 +2,17 @@ from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from Users.models import CustomUser, Country, City
-from Users.serializers import RegisterSerializer, CountrySerializer, CitySerializer, ProfileSerializer
+from Users.models import CustomUser, Country, City, Connection
+from Users.serializers import RegisterSerializer, CountrySerializer, CitySerializer, ProfileSerializer, \
+    ConnectionSerializer, AddConnectionSerializer
 from django.core.validators import EmailValidator
 
 
-class UsersViewSet(viewsets.ModelViewSet):
+class UsersViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
@@ -75,3 +77,59 @@ class UsersViewSet(viewsets.ModelViewSet):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ConnectionViewSet(viewsets.ModelViewSet):
+    serializer_class = ConnectionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_user(self):
+        return get_object_or_404(CustomUser, id=self.request.user.id)
+
+    def get_queryset(self):
+        first_user = Connection.objects.filter(first_user=self.get_user())
+        return first_user
+
+    def list(self, request, *args, **kwargs):
+        category = self.request.query_params.get('category', None)
+        if not category:
+            return Response({'error': 'category is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if category == 'my_connections':
+            queryset = Connection.objects.filter(first_user=self.get_user(),
+                                                 accepted=True)
+        else:
+            queryset = Connection.objects.filter(second_user=self.get_user(),
+                                                 accepted=False)
+
+        if 'level' in request.query_params:
+            queryset = queryset.filter(level=request.query_params['level'])
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        serializer = AddConnectionSerializer(data=request.data,
+                                             context={'user': request.user})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['put'], permission_classes=[IsAuthenticated])
+    def requests(self, request):
+        user = self.get_user()
+        connection = get_object_or_404(Connection, second_user=user, id=request.data.get('id'), accepted=False)
+        accepted = request.data.get('accepted', None)
+        if not accepted:
+            return Response({'error': 'accepted is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if accepted == 'true':
+            connection.accepted = True
+            connection.save()
+
+            new_connection = Connection(first_user=user, second_user=connection.first_user, level=connection.level,
+                                        accepted=True)
+            new_connection.save()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            connection.delete()
+            return Response(status=status.HTTP_200_OK)

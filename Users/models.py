@@ -54,3 +54,21 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class Connection(models.Model):
+    class ConnectionLevel(models.TextChoices):
+        level_1 = 'level_1', '1'
+        level_2 = 'level_2', '2'
+        level_3 = 'level_3', '3'
+
+    first_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='first_user')
+    second_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='second_user')
+    level = models.CharField(max_length=10, choices=ConnectionLevel.choices, default=ConnectionLevel.level_1)
+    accepted = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.first_user} - {self.second_user}'

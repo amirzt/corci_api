@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, City, Country
+from .models import CustomUser, City, Country, Connection
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -43,3 +43,24 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(self.validated_data['password'])
         user.save()
         return user
+
+
+class ConnectionSerializer(serializers.ModelSerializer):
+    first_user = ProfileSerializer(read_only=True)
+    second_user = ProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Connection
+        fields = '__all__'
+
+
+class AddConnectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Connection
+        fields = ['second_user', 'level']
+
+    def save(self, **kwargs):
+        connection = Connection(first_user=self.context.get('user'),
+                                **self.validated_data)
+        connection.save()
+        return connection
