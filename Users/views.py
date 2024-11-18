@@ -115,6 +115,23 @@ class ConnectionViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def destroy(self, request, *args, **kwargs):
+        connection = self.get_object()
+        if connection.first_user.id == request.user.id:
+            connection.delete()
+            return Response(status=status.HTTP_200_OK)
+        return Response({'error': 'you can only delete your own connections'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        connection = self.get_object()
+        if connection.first_user.id == request.user.id:
+            serializer = AddConnectionSerializer(connection, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.update(connection, serializer.validated_data)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'you can only update your own connections'}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['put'], permission_classes=[IsAuthenticated])
     def requests(self, request):
         user = self.get_user()
@@ -128,6 +145,8 @@ class ConnectionViewSet(viewsets.ModelViewSet):
 
             new_connection = Connection(first_user=user, second_user=connection.first_user, level=connection.level,
                                         accepted=True)
+            if 'level' in request.data:
+                new_connection.level = request.data['level']
             new_connection.save()
             return Response(status=status.HTTP_200_OK)
         else:
