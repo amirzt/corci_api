@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, City, Country, Connection, Category
+from .models import CustomUser, City, Country, Connection, Category, UserCategory
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -17,14 +17,21 @@ class CitySerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    city = CitySerializer(read_only=True)  # Nested serializer for GET
+    skills = serializers.SerializerMethodField('get_skills')
+    city = CitySerializer(read_only=True)
     city_id = serializers.PrimaryKeyRelatedField(
         queryset=City.objects.all(), write_only=True, source='city'
     )
 
+    @staticmethod
+    def get_skills(self):
+        categories = UserCategory.objects.filter(user=self)
+        return UserCategorySerializer(categories, many=True).data
+
     class Meta:
         model = CustomUser
-        fields = ['id', 'city', 'city_id', 'name', 'email', 'user_name', 'phone', 'image', 'cover', 'bio', 'gender']
+        fields = ['id', 'city', 'city_id', 'name', 'email', 'user_name', 'phone', 'image', 'cover', 'bio', 'gender',
+                  'skills']
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
@@ -75,4 +82,12 @@ class AddConnectionSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
+        fields = '__all__'
+
+
+class UserCategorySerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+
+    class Meta:
+        model = UserCategory
         fields = '__all__'

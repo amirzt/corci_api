@@ -6,7 +6,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from Users.models import CustomUser, Country, City, Connection, Category
+from Users.models import CustomUser, Country, City, Connection, Category, UserCategory
 from Users.serializers import RegisterSerializer, CountrySerializer, CitySerializer, ProfileSerializer, \
     ConnectionSerializer, AddConnectionSerializer, CategorySerializer
 from django.core.validators import EmailValidator
@@ -77,12 +77,6 @@ class UsersViewSet(viewsets.ViewSet):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
-    def categories(self, request):
-        categories = Category.objects.filter(is_active=True)
-        serializer = CategorySerializer(categories, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ConnectionViewSet(viewsets.ModelViewSet):
@@ -157,4 +151,39 @@ class ConnectionViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_200_OK)
         else:
             connection.delete()
+            return Response(status=status.HTTP_200_OK)
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+    def get_user(self):
+        return get_object_or_404(CustomUser, id=self.request.user.id)
+
+    def list(self, request, *args, **kwargs):
+        categories = Category.objects.filter(is_active=True)
+        serializer = self.get_serializer(categories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
+    def my_categories(self, request):
+        user = self.get_user()
+        id_list = request.data.get('id_list', None)
+        if not id_list:
+            return Response({'error': 'id_list is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.method == 'POST':
+            for ca in id_list:
+                category = get_object_or_404(Category, id=ca)
+                user_category = UserCategory(user=user, category=category)
+                user_category.save()
+
+            return Response(status=status.HTTP_200_OK)
+
+        elif request.method == 'DELETE':
+            for ca in id_list:
+                user_category = get_object_or_404(UserCategory, user=user, category=ca)
+                user_category.delete()
+
             return Response(status=status.HTTP_200_OK)
