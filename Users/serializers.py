@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, City, Country, Connection
+from .models import CustomUser, City, Country, Connection, Category
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -70,3 +70,9 @@ class AddConnectionSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
