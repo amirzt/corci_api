@@ -35,7 +35,7 @@ class Content(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.category.name
+        return self.user.email
 
 
 class ContentImage(models.Model):

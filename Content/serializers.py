@@ -7,10 +7,11 @@ from Users.serializers import CategorySerializer
 class AddContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Content
-        fields = ['description', 'circle', 'type']
+        fields = ['description', 'circle', 'type', 'urgency', 'category', 'due_date', 'priceless']
 
     def save(self, **kwargs):
-        content = Content(**self.validated_data)
+        content = Content(**self.validated_data,
+                          user=self.context.get('user'))
         content.save()
         return content
 
@@ -24,7 +25,7 @@ class AddContentSerializer(serializers.ModelSerializer):
 class AddContentImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContentImage
-        fields = ['image']
+        fields = ['image', 'content']
 
     def save(self, **kwargs):
         content_image = ContentImage(**self.validated_data)

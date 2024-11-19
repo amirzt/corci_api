@@ -58,24 +58,35 @@ class ContentViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data,
+                                         context={'user': self.get_user()})
         if serializer.is_valid():
-            serializer.save(user=self.get_user())
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
-        content = self.get_object()
+        content = get_object_or_404(Content, id=kwargs['pk'])
         if content.user.id == request.user.id:
             content.delete()
             return Response(status=status.HTTP_200_OK)
         return Response({'error': 'you can only delete your own contents'}, status=status.HTTP_400_BAD_REQUEST)
 
+    def update(self, request, *args, **kwargs):
+        content = get_object_or_404(Content, id=kwargs['pk'])
+        if content.user.id == request.user.id:
+            serializer = AddContentSerializer(content, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.update(content, serializer.validated_data)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'you can only update your own contents'}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
     def images(self, request):
         if request.method == 'POST':
-            user = self.get_user()
-            content = self.get_object()
+            user = get_object_or_404(CustomUser, id=request.user.id)
+            content = get_object_or_404(Content, id=request.data['content'])
             if content.user.id != user.id:
                 return Response({'error': 'you can only add images to your own contents'},
                                 status=status.HTTP_403_FORBIDDEN)
@@ -86,11 +97,18 @@ class ContentViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         elif request.method == 'DELETE':
-            user = self.get_user()
-            image = ContentImage.objects.get(id=request.data['id'])
+            user = get_object_or_404(CustomUser, id=request.user.id)
+            image = get_object_or_404(ContentImage, id=request.data['id'])
             if image.content.user.id != user.id:
                 return Response({'error': 'you can only delete images from your own contents'},
                                 status=status.HTTP_403_FORBIDDEN)
 
             image.delete()
             return Response(status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_posts(self, request):
+        user = self.get_user()
+        contents = Content.objects.filter(user=user)
+        serializer = ContentSerializer(contents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
