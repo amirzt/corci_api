@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from Content.models import Content, ContentImage
+from Content.models import Content, ContentImage, Like
 from Users.serializers import CategorySerializer
 
 
@@ -42,6 +42,13 @@ class ContentImageSerializer(serializers.ModelSerializer):
 class ContentSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     images = serializers.SerializerMethodField('get_images')
+    liked = serializers.SerializerMethodField('get_liked')
+
+    def get_liked(self, obj):
+        user = self.context.get('user')
+        if user:
+            return Like.objects.filter(content=obj, user=user).exists()
+        return False
 
     @staticmethod
     def get_images(obj):

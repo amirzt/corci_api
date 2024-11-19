@@ -6,7 +6,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from Content.models import Content, ContentImage
+from Content.models import Content, ContentImage, Like
 from Content.serializers import ContentSerializer, AddContentSerializer, AddContentImageSerializer
 from Users.models import CustomUser, Connection
 
@@ -54,7 +54,8 @@ class ContentViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True,
+                                         context={'user': self.get_user()})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
@@ -110,5 +111,20 @@ class ContentViewSet(viewsets.ModelViewSet):
     def my_posts(self, request):
         user = self.get_user()
         contents = Content.objects.filter(user=user)
-        serializer = ContentSerializer(contents, many=True)
+        serializer = ContentSerializer(contents, many=True,
+                                       context={'user': user})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def like(self, request):
+        content = get_object_or_404(Content, id=request.data['content'])
+        like, created = Like.objects.get_or_create(user=self.get_user(), content=content)
+        if created:
+            like.save()
+            content.total_likes += 1
+            content.save()
+            return Response(status=status.HTTP_200_OK)
+        content.total_likes -= 1
+        content.save()
+        like.delete()
+        return Response(status=status.HTTP_200_OK)
