@@ -5,8 +5,8 @@ from Users.models import CustomUser
 
 # Create your models here.
 class Chat(models.Model):
-    first_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='first_user')
-    second_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='second_user')
+    first_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='first')
+    second_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='second')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

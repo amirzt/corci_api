@@ -19,13 +19,20 @@ class AddMessageSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         message = Message.objects.create(**validated_data,
-                                         user=self.context.get('user'))
+                                         sender=self.context.get('user'),
+                                         chat=self.context.get('chat'))
         return message
 
 
 class ChatSerializer(serializers.ModelSerializer):
     first_user = ProfileSerializer()
     second_user = ProfileSerializer()
+
+    last_message = serializers.SerializerMethodField('get_last_message')
+
+    @staticmethod
+    def get_last_message(obj):
+        return MessageSerializer(Message.objects.filter(chat=obj).last()).data
 
     class Meta:
         model = Chat
