@@ -133,6 +133,7 @@ class ContentViewSet(viewsets.ModelViewSet):
 
 class ResponsibleViewSet(viewsets.ModelViewSet):
     queryset = Responsible.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = ResponsibleSerializer
 
     def get_user(self):
@@ -164,10 +165,11 @@ class ResponsibleViewSet(viewsets.ModelViewSet):
         return Response({'error': 'you can only delete your own responsibilities'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
-    def filter(self):
+    def filter(self, request):
         user = self.get_user()
 
         if 'content' in self.request.query_params:
+            print(self.request.query_params['content'])
             content = get_object_or_404(Content, id=self.request.query_params['content'])
             responsibilities = Responsible.objects.filter(content=content)
             serializer = ResponsibleSerializer(responsibilities, many=True,
@@ -180,14 +182,11 @@ class ResponsibleViewSet(viewsets.ModelViewSet):
                                                context={'user': user})
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            responsibilities = Responsible.objects.filter(user=user)
-            serializer = ResponsibleSerializer(responsibilities, many=True,
-                                               context={'user': user})
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({'error': 'you must specify content or user'}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
-        responsible = get_object_or_404(Responsible, id=request.data['id'])
-        content = get_object_or_404(Content, id=request.data['content'])
+        responsible = get_object_or_404(Responsible, id=kwargs['pk'])
+        content = responsible.content
 
         if content.status != 'pending':
             return Response({'error': 'you can only update responsibilities for pending contents'},
