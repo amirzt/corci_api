@@ -6,8 +6,9 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from Content.models import Content, ContentImage, Like
-from Content.serializers import ContentSerializer, AddContentSerializer, AddContentImageSerializer
+from Content.models import Content, ContentImage, Like, Responsible
+from Content.serializers import ContentSerializer, AddContentSerializer, AddContentImageSerializer, \
+    ResponsibleSerializer
 from Users.models import CustomUser, Connection
 
 
@@ -128,3 +129,72 @@ class ContentViewSet(viewsets.ModelViewSet):
         content.save()
         like.delete()
         return Response(status=status.HTTP_200_OK)
+
+
+class ResponsibleViewSet(viewsets.ModelViewSet):
+    queryset = Responsible.objects.all()
+    serializer_class = ResponsibleSerializer
+
+    def get_user(self):
+        return get_object_or_404(CustomUser, id=self.request.user.id)
+
+    def get_queryset(self):
+        return Responsible.objects.filter(user=self.get_user())
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True,
+                                         context={'user': self.get_user()})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        content = get_object_or_404(Content, id=request.data['content'])
+        if content.user.id == request.user.id:
+            return Response({'error': 'you cannot be responsible for your own content'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        responsible, created = Responsible.objects.get_or_create(user=self.get_user(), content=content)
+        return Response(status=status.HTTP_200_OK, data={'id': responsible.id})
+
+    def destroy(self, request, *args, **kwargs):
+        responsible = get_object_or_404(Responsible, id=kwargs['pk'])
+        if responsible.user.id == request.user.id:
+            responsible.delete()
+            return Response(status=status.HTTP_200_OK)
+        return Response({'error': 'you can only delete your own responsibilities'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def filter(self):
+        user = self.get_user()
+
+        if 'content' in self.request.query_params:
+            content = get_object_or_404(Content, id=self.request.query_params['content'])
+            responsibilities = Responsible.objects.filter(content=content)
+            serializer = ResponsibleSerializer(responsibilities, many=True,
+                                               context={'user': user})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        elif 'user' in self.request.query_params:
+            second_user = get_object_or_404(CustomUser, id=self.request.query_params['user'])
+            responsibilities = Responsible.objects.filter(user=second_user)
+            serializer = ResponsibleSerializer(responsibilities, many=True,
+                                               context={'user': user})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            responsibilities = Responsible.objects.filter(user=user)
+            serializer = ResponsibleSerializer(responsibilities, many=True,
+                                               context={'user': user})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        responsible = get_object_or_404(Responsible, id=request.data['id'])
+        content = get_object_or_404(Content, id=request.data['content'])
+
+        if content.status != 'pending':
+            return Response({'error': 'you can only update responsibilities for pending contents'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if responsible.content.user.id == request.user.id:
+            responsible.status = request.data['status']
+            responsible.save()
+            return Response(status=status.HTTP_200_OK)
+        return Response({'error': 'you can only update your own content'}, status=status.HTTP_400_BAD_REQUEST)

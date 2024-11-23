@@ -20,6 +20,14 @@ class Content(models.Model):
         level_3 = 'level_3', '3'
         public = 'public', 'Public'
 
+    class Status(models.TextChoices):
+        pending = 'pending', 'Pending'
+        accepted = 'accepted', 'Accepted'
+        ongoing = 'ongoing', 'Ongoing'
+        completed = 'completed', 'Completed'
+        failed = 'failed', 'Failed'
+        cancelled = 'cancelled', 'Cancelled'
+
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     type = models.CharField(max_length=50, choices=TypeChoice.choices, default=TypeChoice.post)
@@ -30,6 +38,7 @@ class Content(models.Model):
     priceless = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     total_likes = models.IntegerField(default=0)
+    status = models.CharField(max_length=50, choices=Status.choices, default=Status.pending)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -61,3 +70,24 @@ class Like(models.Model):
 
     class Meta:
         unique_together = ('content', 'user')
+
+
+class Responsible(models.Model):
+    class Status(models.TextChoices):
+        pending = 'pending', 'Pending'
+        accepted = 'accepted', 'Accepted'
+        ongoing = 'ongoing', 'Ongoing'
+        completed = 'completed', 'Completed'
+        failed = 'failed', 'Failed'
+        cancelled = 'cancelled', 'Cancelled'
+
+    content = models.ForeignKey(Content, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    status = models.CharField(max_length=50, choices=Status.choices, default=Status.pending)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.content.user.email
+
