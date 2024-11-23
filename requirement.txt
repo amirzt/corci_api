@@ -4,3 +4,4 @@ django-filter
 pillow
 requests
 fcm-django
+python-decouple
