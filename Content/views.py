@@ -181,6 +181,11 @@ class ResponsibleViewSet(viewsets.ModelViewSet):
             serializer = ResponsibleSerializer(responsibilities, many=True,
                                                context={'user': user})
             return Response(serializer.data, status=status.HTTP_200_OK)
+        elif 'mine' in self.request.query_params:
+            responsibilities = Responsible.objects.filter(content__user=user)
+            serializer = ResponsibleSerializer(responsibilities, many=True,
+                                               context={'user': user})
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'you must specify content or user'}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, City, Country, Connection, Category, UserCategory
+from .models import CustomUser, City, Country, Connection, Category, UserCategory, Banner, HomeMessage, Version
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -90,4 +90,22 @@ class UserCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserCategory
+        fields = '__all__'
+
+
+class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        fields = '__all__'
+
+
+class HomeMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HomeMessage
+        fields = '__all__'
+
+
+class VersionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Version
         fields = '__all__'

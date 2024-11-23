@@ -92,3 +92,39 @@ class UserCategory(models.Model):
 
     class Meta:
         unique_together = ('user', 'category')
+
+
+class Banner(models.Model):
+    image = models.ImageField(upload_to='Banners/', null=False)
+    video = models.FileField(upload_to='Banners/', null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    url = models.CharField(max_length=1000, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class HomeMessage(models.Model):
+    title = models.CharField(max_length=1000, null=True, blank=True)
+    message = models.TextField(max_length=1000, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+
+class Version(models.Model):
+    version_number = models.IntegerField(default=1)
+    title = models.CharField(max_length=1000, null=True, blank=True)
+    description = models.TextField(max_length=1000, null=True, blank=True)
+    is_force = models.BooleanField(default=False)
+    force_min_version = models.IntegerField(default=1)
+
+
+class UserFCMToken(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    token = models.CharField(max_length=1000, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

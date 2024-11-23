@@ -6,9 +6,11 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from Users.models import CustomUser, Country, City, Connection, Category, UserCategory
+from Users.models import CustomUser, Country, City, Connection, Category, UserCategory, HomeMessage, Banner, Version, \
+    UserFCMToken
 from Users.serializers import RegisterSerializer, CountrySerializer, CitySerializer, ProfileSerializer, \
-    ConnectionSerializer, AddConnectionSerializer, CategorySerializer
+    ConnectionSerializer, AddConnectionSerializer, CategorySerializer, HomeMessageSerializer, BannerSerializer, \
+    VersionSerializer
 from django.core.validators import EmailValidator
 
 
@@ -41,6 +43,12 @@ class UsersViewSet(viewsets.ViewSet):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         user.is_active = True
         user.save()
+
+        # save fcm token
+        fcm_token = request.data.get('fcm_token', None)
+        if fcm_token:
+            UserFCMToken.objects.create(user=user, token=fcm_token)
+
         token, _ = Token.objects.get_or_create(user=user)
 
         return Response({'token': token.key,
@@ -77,6 +85,27 @@ class UsersViewSet(viewsets.ViewSet):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def splash(self, request):
+        user = get_object_or_404(CustomUser, id=request.user.id)
+        version = request.data.get('version', None)
+        if version:
+            user.version = version
+            user.save()
+        return Response(status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def home(self, request):
+        home_messages = HomeMessage.objects.filter(is_active=True).order_by('-created_at')
+        banners = Banner.objects.filter(is_active=True).order_by('-created_at')
+        version = Version.objects.all().last()
+
+        return Response({
+            'home_messages': HomeMessageSerializer(home_messages, many=True).data,
+            'banners': BannerSerializer(banners, many=True).data,
+            'version': VersionSerializer(version).data,
+        })
 
 
 class ConnectionViewSet(viewsets.ModelViewSet):
