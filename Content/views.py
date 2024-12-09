@@ -6,9 +6,9 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from Content.models import Content, ContentImage, Like, Comment
+from Content.models import Content, ContentImage, Like, Comment, Offer, Task
 from Content.serializers import ContentSerializer, AddContentSerializer, AddContentImageSerializer, \
-    CommentSerializer, AddCommentSerializer
+    CommentSerializer, AddCommentSerializer, OfferSerializer, AddOfferSerializer, TaskSerializer
 from Users.models import CustomUser, Connection
 
 
@@ -158,3 +158,81 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OfferViewSet(ContentViewSet):
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['content', 'status', 'due_date']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return OfferSerializer
+        return AddOfferSerializer
+
+    def get_user(self):
+        return get_object_or_404(CustomUser, id=self.request.user.id)
+
+    def get_queryset(self):
+        offers = Offer.objects.filter(content__user=self.get_user()).select_related()
+        return offers
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data,
+                                         partial=True,
+                                         context={'user': self.get_user()})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        offer = get_object_or_404(Offer, id=kwargs['pk'])
+        if offer.user == self.get_user() or offer.content.user == self.get_user():
+            new_status = request.data.get('status', None)
+            if not new_status:
+                return Response({'error': 'you must specify status'}, status=status.HTTP_400_BAD_REQUEST)
+            offer.status = new_status
+            offer.save()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'you can only update your own offers'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TaskViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        return TaskSerializer
+
+    def get_user(self):
+        return get_object_or_404(CustomUser, id=self.request.user.id)
+
+    def get_queryset(self):
+        response = Task.objects.filter(offer__user=self.get_user()).select_related()
+        own = Task.objects.filter(offer__content__user=self.get_user()).select_related()
+        tasks = response | own
+        return tasks
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        task = get_object_or_404(Task, id=kwargs['pk'])
+        if task.offer.user == self.get_user() or task.offer.content.user == self.get_user():
+            new_status = request.data.get('status', None)
+            if not new_status:
+                return Response({'error': 'you must specify status'}, status=status.HTTP_400_BAD_REQUEST)
+            task.status = new_status
+            task.save()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'you can only update your own tasks'}, status=status.HTTP_400_BAD_REQUEST)
+

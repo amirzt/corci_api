@@ -82,3 +82,39 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.content.user.email
+
+
+class Offer(models.Model):
+    class Status(models.TextChoices):
+        pending = 'pending', 'Pending'
+        accepted = 'accepted', 'Accepted'
+        rejected = 'rejected', 'Rejected'
+
+    content = models.ForeignKey(Content, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    description = models.TextField(null=True, blank=True, max_length=1000)
+    due_date = models.DateTimeField(null=True)
+    status = models.CharField(max_length=50, choices=Status.choices, default=Status.pending)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.content.user.email
+
+
+class Task(models.Model):
+    class Status(models.TextChoices):
+        ongoing = 'ongoing', 'Ongoing'
+        completed = 'completed', 'Completed'
+        canceled_by_author = 'canceled_by_author', 'Canceled by author'
+        canceled_buy_responsible = 'canceled_buy_responsible', 'Canceled by responsible'
+
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE)
+    status = models.CharField(max_length=50, choices=Status.choices, default=Status.ongoing)
+    score = models.IntegerField(default=0)
+    author_comment = models.TextField(null=True, blank=True, max_length=1000)
+    responsible_comment = models.TextField(null=True, blank=True, max_length=1000)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

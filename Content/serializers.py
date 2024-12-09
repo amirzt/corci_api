@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
-from Content.models import Content, ContentImage, Like, Comment
+from Content.models import Content, ContentImage, Like, Comment, Offer, Task
 from Users.serializers import CategorySerializer, ProfileSerializer
+from chat.models import Chat, Message
 
 
 class AddContentSerializer(serializers.ModelSerializer):
@@ -82,3 +83,44 @@ class AddCommentSerializer(serializers.ModelSerializer):
                           user=self.context.get('user'))
         comment.save()
         return comment
+
+
+class OfferSerializer(serializers.ModelSerializer):
+    content = ContentSerializer(read_only=True)
+    user = ProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Offer
+        fields = '__all__'
+
+
+class AddOfferSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Offer
+        fields = ['content', 'description']
+
+    def save(self, **kwargs):
+        offer = Offer(**self.validated_data,
+                      user=self.context.get('user'))
+        offer.save()
+
+        # send message in chat
+        # chat1 = Chat.objects.filter(first_user=self.context.get('user'), second_user=offer.content.user)
+        # chat2 = Chat.objects.filter(first_user=offer.content.user, second_user=self.context.get('user'))
+        # chat = chat1 | chat2
+        # chat = chat.first()
+        # if not chat:
+        #     chat = Chat.objects.create(first_user=self.context.get('user'), second_user=offer.content.user)
+        #
+        # Message.objects.create(chat=chat,
+        #                        sender=self.context.get('user'),
+        #                        offer=offer)
+        return offer
+
+
+class TaskSerializer(serializers.ModelSerializer):
+    offer = OfferSerializer(read_only=True)
+
+    class Meta:
+        model = Task
+        fields = '__all__'

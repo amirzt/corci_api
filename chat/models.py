@@ -1,5 +1,6 @@
 from django.db import models
 
+from Content.models import Offer
 from Users.models import CustomUser
 
 
@@ -20,8 +21,8 @@ class Chat(models.Model):
 class Message(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    content = models.TextField(max_length=1000, null=False, blank=False)
     image = models.ImageField(upload_to='chat/image/', null=True, blank=True)
+    offer = models.ForeignKey(Offer, on_delete=models.SET_NULL, null=True, blank=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
