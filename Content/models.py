@@ -72,6 +72,18 @@ class Like(models.Model):
         unique_together = ('content', 'user')
 
 
+class Comment(models.Model):
+    content = models.ForeignKey(Content, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    comment = models.TextField(null=False, blank=False, max_length=1000)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.content.user.email
+
+
 class Responsible(models.Model):
     class Status(models.TextChoices):
         pending = 'pending', 'Pending'
@@ -90,4 +102,3 @@ class Responsible(models.Model):
 
     def __str__(self):
         return self.content.user.email
-

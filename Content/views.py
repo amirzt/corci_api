@@ -6,9 +6,9 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from Content.models import Content, ContentImage, Like, Responsible
+from Content.models import Content, ContentImage, Like, Responsible, Comment
 from Content.serializers import ContentSerializer, AddContentSerializer, AddContentImageSerializer, \
-    ResponsibleSerializer
+    ResponsibleSerializer, CommentSerializer, AddCommentSerializer
 from Users.models import CustomUser, Connection
 
 
@@ -55,6 +55,9 @@ class ContentViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        search = request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(Q(description__icontains=search))
         serializer = self.get_serializer(queryset, many=True,
                                          context={'user': self.get_user()})
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -202,3 +205,29 @@ class ResponsibleViewSet(viewsets.ModelViewSet):
             responsible.save()
             return Response(status=status.HTTP_200_OK)
         return Response({'error': 'you can only update your own content'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+
+    def get_user(self):
+        return get_object_or_404(CustomUser, id=self.request.user.id)
+
+    def list(self, request, *args, **kwargs):
+        pk = request.query_params.get('content', None)
+        if pk is None:
+            return Response({'error': 'you must specify content id'}, status=status.HTTP_400_BAD_REQUEST)
+        content = get_object_or_404(Content, id=pk)
+        comments = Comment.objects.filter(content=content)
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        user = self.get_user()
+        serializer = AddCommentSerializer(data=request.data,
+                                          context={'user': user})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
