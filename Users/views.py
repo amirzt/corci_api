@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from Users.models import CustomUser, Country, City, Connection, Category, UserCategory, HomeMessage, Banner, Version, \
-    UserFCMToken
+    UserFCMToken, OTP
 from Users.serializers import RegisterSerializer, CountrySerializer, CitySerializer, ProfileSerializer, \
     ConnectionSerializer, AddConnectionSerializer, CategorySerializer, HomeMessageSerializer, BannerSerializer, \
     VersionSerializer
@@ -53,6 +53,39 @@ class UsersViewSet(viewsets.ViewSet):
 
         return Response({'token': token.key,
                          'exist': exist}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def check_otp(self, request):
+        email = request.data.get('email', None)
+        user_otp = request.data.get('otp', None)
+        if email is None or user_otp is None:
+            return Response({'error': 'please enter your email and otp'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validator = EmailValidator()
+            validator(email)
+            pass
+        except ValidationError:
+            return Response({'error': 'email is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = CustomUser.objects.get(email=email)
+            otp = OTP.objects.filter(user=user).order_by('-created_at').first()
+            if otp.otp != user_otp:
+                return Response({'error': 'Code is not correct'}, status=status.HTTP_400_BAD_REQUEST)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'user does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_active = True
+        user.save()
+
+        # save fcm token
+        fcm_token = request.data.get('fcm_token', None)
+        if fcm_token:
+            UserFCMToken.objects.create(user=user, token=fcm_token)
+
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response({'token': token.key}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def country(self, request):
