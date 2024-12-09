@@ -141,6 +141,24 @@ class UsersViewSet(viewsets.ViewSet):
         })
 
 
+def get_mutual_connections(user, target):
+    user_connections = Connection.objects.filter(
+        first_user=user,
+        accepted=True
+    ).values_list('second_user_id', flat=True)
+    for c in user_connections:
+        print(c)
+
+    # Step 2: Find connections between those users and the `other_user_id`
+    mutual_connections = Connection.objects.filter(
+        first_user_id__in=user_connections,
+        second_user_id=target.id,
+        accepted=True
+    )
+
+    return mutual_connections
+
+
 class ConnectionViewSet(viewsets.ModelViewSet):
     serializer_class = ConnectionSerializer
     permission_classes = [IsAuthenticated]
@@ -157,11 +175,18 @@ class ConnectionViewSet(viewsets.ModelViewSet):
         if not category:
             return Response({'error': 'category is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if category == 'my_connections':
+        if category == 'request':
+            queryset = Connection.objects.filter(second_user=self.get_user(),
+                                                 accepted=False)
+        elif category == 'my_connections':
             queryset = Connection.objects.filter(first_user=self.get_user(),
                                                  accepted=True)
         else:
-            queryset = Connection.objects.filter(second_user=self.get_user(),
+            target_id = request.query_params.get('target', None)
+            if not target_id:
+                return Response({'error': 'target is required'}, status=status.HTTP_400_BAD_REQUEST)
+            target = get_object_or_404(CustomUser, id=target_id)
+            queryset = Connection.objects.filter(first_user=target,
                                                  accepted=False)
 
         if 'level' in request.query_params:
@@ -214,6 +239,17 @@ class ConnectionViewSet(viewsets.ModelViewSet):
         else:
             connection.delete()
             return Response(status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def mutual(self, request):
+        user = self.get_user()
+        target_id = request.query_params.get('target_id', None)
+        if not target_id:
+            return Response({'error': 'target_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        target = get_object_or_404(CustomUser, id=target_id)
+
+        connections = get_mutual_connections(user, target)
+        return Response(ConnectionSerializer(connections, many=True).data, status=status.HTTP_200_OK)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):

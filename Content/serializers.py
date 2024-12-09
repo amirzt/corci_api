@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from Content.models import Content, ContentImage, Like, Responsible, Comment
+from Content.models import Content, ContentImage, Like, Comment
 from Users.serializers import CategorySerializer, ProfileSerializer
 
 
@@ -61,15 +61,6 @@ class ContentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Content
-        fields = '__all__'
-
-
-class ResponsibleSerializer(serializers.ModelSerializer):
-    user = ProfileSerializer(read_only=True)
-    content = ContentSerializer(read_only=True)
-
-    class Meta:
-        model = Responsible
         fields = '__all__'
 
 
