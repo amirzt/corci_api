@@ -61,4 +61,4 @@ class Message(models.Model):
         verbose_name_plural = "Messages"
 
     def __str__(self):
-        return f"Message {self.id} from {self.sender.id} in Chat {self.chat.id}"
+        return f"from {self.sender.id} in Chat {self.chat.id}"

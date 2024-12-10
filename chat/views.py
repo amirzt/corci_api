@@ -6,9 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from Users.models import CustomUser
-from chat.models import Chat
+from chat.models import Chat, ChatParticipant
 from chat.serializers import ChatSerializer, ChatMessageSerializer
-from chat.utils import send_message
+from chat.utils import send_message, mark_messages_as_read
 
 
 class ChatViewSet(viewsets.ViewSet):
@@ -18,14 +18,17 @@ class ChatViewSet(viewsets.ViewSet):
         return get_object_or_404(CustomUser, id=self.request.user.id)
 
     def list(self, request):
-        user = request.user
-        chats = Chat.objects.filter(participants=user).distinct()
-        serializer = ChatSerializer(chats, many=True)
+        user = self.get_user()
+        participant_chats = ChatParticipant.objects.filter(user=user).values_list('chat', flat=True)
+        chats = Chat.objects.filter(id__in=participant_chats)
+
+        serializer = ChatSerializer(chats, many=True,
+                                    context={'user': user})
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
     def messages(self, request, pk=None):
-        user = request.user
+        user = self.get_user()
         try:
             chat = Chat.objects.prefetch_related('participants').get(id=pk)
             if not chat.participants.filter(id=user.id).exists():
@@ -35,6 +38,10 @@ class ChatViewSet(viewsets.ViewSet):
 
         messages = chat.messages.order_by('timestamp')
         serializer = ChatMessageSerializer(messages, many=True)
+
+        # read messages
+        mark_messages_as_read(user, chat)
+
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])

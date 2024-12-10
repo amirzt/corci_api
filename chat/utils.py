@@ -8,16 +8,33 @@ def get_or_create_chat_between_users(user1, user2):
     chat, created = Chat.objects.get_or_create(unique_identifier=unique_identifier)
 
     if created:
-        chat.participants.set([user1, user2])
+        ChatParticipant.objects.create(chat=chat, user=user1)
+        ChatParticipant.objects.create(chat=chat, user=user2)
 
     return chat, created
 
 
 def get_unread_message_count(user, chat):
-    last_read_message_id = ChatParticipant.objects.get(user=user, chat=chat).last_read_message_id
-    if last_read_message_id:
-        return chat.messages.filter(id__gt=last_read_message_id).count()
-    return chat.messages.count()
+    try:
+        participant = ChatParticipant.objects.get(user=user, chat=chat)
+    except ChatParticipant.DoesNotExist:
+        return 0
+
+    last_read_message_id = participant.last_read_message_id
+    if not last_read_message_id:
+        return chat.messages.exclude(sender=user).count()
+
+    try:
+        last_read_message = Message.objects.get(id=last_read_message_id)
+        last_read_timestamp = last_read_message.timestamp
+    except Message.DoesNotExist:
+        return chat.messages.exclude(sender=user).count()
+
+    unread_count = chat.messages.filter(
+        timestamp__gt=last_read_timestamp
+    ).exclude(sender=user).count()
+
+    return unread_count
 
 
 def mark_messages_as_read(user, chat):
@@ -25,9 +42,13 @@ def mark_messages_as_read(user, chat):
     if last_message:
         ChatParticipant.objects.filter(user=user, chat=chat).update(last_read_message_id=last_message.id)
 
+    Message.objects.filter(
+        chat=chat,
+        is_read=False
+    ).exclude(sender=user).update(is_read=True)
+
 
 def send_message(sender, receiver, content, offer=None):
-
     from django.db import transaction
 
     chat, _ = get_or_create_chat_between_users(sender, receiver)
