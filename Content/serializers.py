@@ -44,6 +44,7 @@ class ContentSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField('get_images')
     liked = serializers.SerializerMethodField('get_liked')
     comments = serializers.SerializerMethodField('get_comments')
+    user = ProfileSerializer(read_only=True)
 
     def get_liked(self, obj):
         user = self.context.get('user')
