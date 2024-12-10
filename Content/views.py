@@ -11,6 +11,7 @@ from Content.serializers import ContentSerializer, AddContentSerializer, AddCont
     CommentSerializer, AddCommentSerializer, OfferSerializer, AddOfferSerializer, TaskSerializer
 from Users.models import CustomUser, Connection
 from chat.utils import send_message
+from notification.utils import send_notification
 
 
 class ContentViewSet(viewsets.ModelViewSet):
@@ -193,8 +194,12 @@ class OfferViewSet(ContentViewSet):
                                          context={'user': self.get_user()})
         if serializer.is_valid():
             offer = serializer.save()
-            # send message
+            # send chat message
             send_message(sender=self.get_user(), receiver=offer.content.user, content=offer.description, offer=offer)
+
+            # send in app notif
+            send_notification(receiver=offer.content.user, content=offer.content, message_type='offer', offer=offer,
+                              message='')
 
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -243,4 +248,3 @@ class TaskViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_200_OK)
         else:
             return Response({'error': 'you can only update your own tasks'}, status=status.HTTP_400_BAD_REQUEST)
-
