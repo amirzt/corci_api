@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from Users.models import CustomUser
 from chat.models import Chat, ChatParticipant
 from chat.serializers import ChatSerializer, ChatMessageSerializer
-from chat.utils import send_message, mark_messages_as_read
+from chat.utils import send_message, mark_messages_as_read, get_unread_message_count
 
 
 class ChatViewSet(viewsets.ViewSet):
@@ -31,7 +31,7 @@ class ChatViewSet(viewsets.ViewSet):
         user = self.get_user()
         try:
             chat = Chat.objects.prefetch_related('participants').get(id=pk)
-            if not chat.participants.filter(id=user.id).exists():
+            if not chat.participants.filter(user_id=user.id).exists():
                 raise PermissionDenied("You do not have permission to access this chat.")
         except Chat.DoesNotExist:
             return Response({"detail": "Chat not found or access denied."}, status=404)
@@ -66,3 +66,16 @@ class ChatViewSet(viewsets.ViewSet):
 
         serializer = ChatMessageSerializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], url_path='unread_count', url_name='unread_count')
+    def unread_count(self, request):
+        user = self.get_user()
+
+        participant_chats = ChatParticipant.objects.filter(user=user).values_list('chat', flat=True)
+
+        total_unread_count = 0
+        for chat_id in participant_chats:
+            chat = Chat.objects.get(id=chat_id)
+            total_unread_count += get_unread_message_count(user, chat)
+
+        return Response({"unread_count": total_unread_count}, status=status.HTTP_200_OK)
