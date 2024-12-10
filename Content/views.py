@@ -10,6 +10,7 @@ from Content.models import Content, ContentImage, Like, Comment, Offer, Task
 from Content.serializers import ContentSerializer, AddContentSerializer, AddContentImageSerializer, \
     CommentSerializer, AddCommentSerializer, OfferSerializer, AddOfferSerializer, TaskSerializer
 from Users.models import CustomUser, Connection
+from chat.utils import send_message
 
 
 class ContentViewSet(viewsets.ModelViewSet):
@@ -183,11 +184,18 @@ class OfferViewSet(ContentViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
+        offer = Offer.objects.filter(user=self.get_user(),
+                                     content=request.data['content']).count()
+        if offer > 0:
+            return Response(data={"message": "You have already sent your offer"}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(data=request.data,
                                          partial=True,
                                          context={'user': self.get_user()})
         if serializer.is_valid():
-            serializer.save()
+            offer = serializer.save()
+            # send message
+            send_message(sender=self.get_user(), receiver=offer.content.user, content=offer.description, offer=offer)
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
