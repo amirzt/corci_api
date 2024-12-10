@@ -76,6 +76,7 @@ class Connection(models.Model):
 
 class Category(models.Model):
     name = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='category/', null=True, default=None)
     description = models.TextField(null=True, default=None, max_length=1000)
     is_active = models.BooleanField(default=True)
 
