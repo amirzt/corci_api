@@ -1,39 +1,30 @@
 from rest_framework import serializers
 
-from Users.serializers import ProfileSerializer
-from chat.models import Chat, Message
+from Content.serializers import OfferSerializer
+from .models import Chat, Message, ChatParticipant
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender = ProfileSerializer()
-
     class Meta:
         model = Message
-        fields = '__all__'
-
-
-class AddMessageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Message
-        fields = ['content', 'image']
-
-    def create(self, validated_data):
-        message = Message.objects.create(**validated_data,
-                                         sender=self.context.get('user'),
-                                         chat=self.context.get('chat'))
-        return message
+        fields = ['id', 'sender', 'content', 'offer', 'timestamp']
 
 
 class ChatSerializer(serializers.ModelSerializer):
-    first_user = ProfileSerializer()
-    second_user = ProfileSerializer()
-
-    last_message = serializers.SerializerMethodField('get_last_message')
-
-    @staticmethod
-    def get_last_message(obj):
-        return MessageSerializer(Message.objects.filter(chat=obj).last()).data
+    last_message = serializers.SerializerMethodField()
 
     class Meta:
         model = Chat
-        fields = '__all__'
+        fields = ['id', 'participants', 'last_message']
+
+    def get_last_message(self, obj):
+        last_message = obj.messages.order_by('-timestamp').first()
+        return MessageSerializer(last_message).data if last_message else None
+
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    offer = OfferSerializer()
+
+    class Meta:
+        model = Message
+        fields = ['id', 'sender', 'content', 'offer', 'timestamp']

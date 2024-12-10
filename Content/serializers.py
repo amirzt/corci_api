@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from Content.models import Content, ContentImage, Like, Comment, Offer, Task
 from Users.serializers import CategorySerializer, ProfileSerializer
-from chat.models import Chat, Message
 
 
 class AddContentSerializer(serializers.ModelSerializer):
