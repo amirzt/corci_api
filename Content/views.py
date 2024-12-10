@@ -230,6 +230,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         response = Task.objects.filter(offer__user=self.get_user()).select_related()
         own = Task.objects.filter(offer__content__user=self.get_user()).select_related()
         tasks = response | own
+        if 'due_date' in self.request.query_params:
+            tasks = tasks.filter(offer__due_date=self.request.query_params.get('due_date'))
         return tasks
 
     def list(self, request, *args, **kwargs):
