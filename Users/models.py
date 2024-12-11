@@ -34,6 +34,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     image = models.ImageField(upload_to='user/image/', null=True, blank=True)
     cover = models.ImageField(upload_to='user/cover/', null=True, blank=True)
     bio = models.TextField(null=True, blank=True, max_length=1000)
+    credit = models.FloatField(default=0.0)
     gender = models.CharField(max_length=50, null=True, blank=True, choices=GenderChoices.choices,
                               default=GenderChoices.OTHER)
 

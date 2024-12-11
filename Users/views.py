@@ -87,6 +87,9 @@ class UsersViewSet(viewsets.ViewSet):
 
         return Response({'token': token.key}, status=status.HTTP_200_OK)
 
+    def get_user(self):
+        return get_object_or_404(CustomUser, id=self.request.user.id)
+
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def country(self, request):
         country = Country.objects.all()
@@ -108,7 +111,8 @@ class UsersViewSet(viewsets.ViewSet):
                 user = CustomUser.objects.get(id=request.query_params['id'])
             else:
                 user = CustomUser.objects.get(id=request.user.id)
-            serializer = ProfileSerializer(user)
+            serializer = ProfileSerializer(user,
+                                           context={'user': self.get_user()})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         elif request.method == 'PUT':
