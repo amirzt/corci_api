@@ -120,6 +120,10 @@ class AddOfferSerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     offer = OfferSerializer(read_only=True)
+    my_task = serializers.SerializerMethodField()
+
+    def get_my_task(self, obj):
+        return obj.offer.user == self.context.get('user')
 
     class Meta:
         model = Task

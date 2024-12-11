@@ -258,14 +258,14 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True, context={"user": self.get_user()})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
         task = get_object_or_404(Task, id=kwargs['pk'])
         if task.offer.user == self.get_user() or task.offer.content.user == self.get_user():
-            if task.status == Task.Status.completed:
-                return Response({'error': 'this task is completed'}, status=status.HTTP_400_BAD_REQUEST)
+            if task.status != Task.Status.ongoing:
+                return Response({'error': 'you can not change this task'}, status=status.HTTP_400_BAD_REQUEST)
             new_status = request.data.get('status', None)
             if not new_status:
                 return Response({'error': 'you must specify status'}, status=status.HTTP_400_BAD_REQUEST)
