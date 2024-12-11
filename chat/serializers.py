@@ -23,7 +23,7 @@ class ChatSerializer(serializers.ModelSerializer):
 
     def get_last_message(self, obj):
         last_message = obj.messages.order_by('-timestamp').first()
-        return MessageSerializer(last_message).data if last_message else None
+        return ChatMessageSerializer(last_message).data if last_message else None
 
     def get_unread_count(self, obj):
         return get_unread_message_count(self.context.get('user'), obj)
