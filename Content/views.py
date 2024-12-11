@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from Content.models import Content, ContentImage, Like, Comment, Offer, Task
 from Content.serializers import ContentSerializer, AddContentSerializer, AddContentImageSerializer, \
     CommentSerializer, AddCommentSerializer, OfferSerializer, AddOfferSerializer, TaskSerializer
-from Users.models import CustomUser, Connection
+from Users.models import CustomUser, Connection, UserCategory
 from chat.utils import send_message
 from notification.utils import send_notification
 
@@ -114,8 +114,11 @@ class ContentViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
-    def my_posts(self, request):
-        user = self.get_user()
+    def posts(self, request):
+        if 'user' in request.query_params:
+            user = get_object_or_404(CustomUser, id=request.query_params.get('user'))
+        else:
+            user = self.get_user()
         contents = Content.objects.filter(user=user)
         serializer = ContentSerializer(contents, many=True,
                                        context={'user': user})
@@ -206,19 +209,40 @@ class OfferViewSet(ContentViewSet):
 
     def update(self, request, *args, **kwargs):
         offer = get_object_or_404(Offer, id=kwargs['pk'])
-        if offer.user == self.get_user() or offer.content.user == self.get_user():
+        if offer.content.user == self.get_user():
             new_status = request.data.get('status', None)
             if not new_status:
                 return Response({'error': 'you must specify status'}, status=status.HTTP_400_BAD_REQUEST)
             offer.status = new_status
             offer.save()
+
+            # create task
+            if offer.status == Offer.Status.accepted:
+                task = Task.objects.create(offer=offer,
+                                           due_date=offer.due_date)
+                task.save()
             return Response(status=status.HTTP_200_OK)
         else:
             return Response({'error': 'you can only update your own offers'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def calculate_score(task):
+    if task.offer.content.category:
+        category = task.offer.content.category
+        responsible = task.offer.user
+        skill, created = UserCategory.objects.get_or_create(category=category,
+                                                            user=responsible)
+        if skill.score == 0:
+            skill.score = float(task.score)
+        else:
+            skill.score = (float(skill.score) + float(task.score)) / 2
+        skill.save()
+
+
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['due_date']
 
     def get_serializer_class(self):
         return TaskSerializer
@@ -230,8 +254,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         response = Task.objects.filter(offer__user=self.get_user()).select_related()
         own = Task.objects.filter(offer__content__user=self.get_user()).select_related()
         tasks = response | own
-        if 'due_date' in self.request.query_params:
-            tasks = tasks.filter(offer__due_date=self.request.query_params.get('due_date'))
         return tasks
 
     def list(self, request, *args, **kwargs):
@@ -242,11 +264,22 @@ class TaskViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         task = get_object_or_404(Task, id=kwargs['pk'])
         if task.offer.user == self.get_user() or task.offer.content.user == self.get_user():
+            if task.status == Task.Status.completed:
+                return Response({'error': 'this task is completed'}, status=status.HTTP_400_BAD_REQUEST)
             new_status = request.data.get('status', None)
             if not new_status:
                 return Response({'error': 'you must specify status'}, status=status.HTTP_400_BAD_REQUEST)
+            if 'score' in request.data:
+                task.score = request.data.get('score')
+            if 'author_comment' in request.data:
+                task.author_comment = request.data.get('author_comment')
+            if 'responsible_comment' in request.data:
+                task.responsible_comment = request.data.get('responsible_comment')
             task.status = new_status
             task.save()
+
+            if new_status == Task.Status.completed:
+                calculate_score(task)
             return Response(status=status.HTTP_200_OK)
         else:
             return Response({'error': 'you can only update your own tasks'}, status=status.HTTP_400_BAD_REQUEST)

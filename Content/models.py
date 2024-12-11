@@ -111,8 +111,9 @@ class Task(models.Model):
         canceled_buy_responsible = 'canceled_buy_responsible', 'Canceled by responsible'
 
     offer = models.ForeignKey(Offer, on_delete=models.CASCADE)
+    due_date = models.DateField(default=None, null=True)
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.ongoing)
-    score = models.IntegerField(default=0)
+    score = models.FloatField(default=0)
     author_comment = models.TextField(null=True, blank=True, max_length=1000)
     responsible_comment = models.TextField(null=True, blank=True, max_length=1000)
 
