@@ -37,7 +37,8 @@ class ChatViewSet(viewsets.ViewSet):
             return Response({"detail": "Chat not found or access denied."}, status=404)
 
         messages = chat.messages.order_by('timestamp')
-        serializer = ChatMessageSerializer(messages, many=True)
+        serializer = ChatMessageSerializer(messages, many=True,
+                                           context={"user": user})
 
         # read messages
         mark_messages_as_read(user, chat)
@@ -64,7 +65,7 @@ class ChatViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = ChatMessageSerializer(message)
+        serializer = ChatMessageSerializer(message, context={"user": sender})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'], url_path='unread_count', url_name='unread_count')
