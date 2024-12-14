@@ -19,3 +19,6 @@ env/
 
 # OS Files
 .DS_Store
+
+# firebase
+firebase.json
