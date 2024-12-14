@@ -52,7 +52,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['id', 'name', 'email', 'user_name', 'phone', 'image', 'cover', 'bio', 'gender', 'date_joint',
-                  'skills', 'credit', 'tasks', 'posts']
+                  'skills', 'credit', 'tasks', 'posts', 'connected']
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():

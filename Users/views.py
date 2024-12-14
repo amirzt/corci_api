@@ -199,6 +199,17 @@ class ConnectionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
+        connection_exist = Connection.objects.filter(first_user=request.user,
+                                                     second_user=request.data['second_user'],
+                                                     accepted=True)
+        if connection_exist:
+            return Response({'error': 'connection already exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+        request_sent = Connection.objects.filter(first_user=request.user,
+                                                 second_user=request.data['second_user'],
+                                                 accepted=False)
+        if request_sent:
+            return Response({'error': 'request already sent'}, status=status.HTTP_400_BAD_REQUEST)
         serializer = AddConnectionSerializer(data=request.data,
                                              context={'user': request.user})
         if serializer.is_valid():
@@ -228,16 +239,18 @@ class ConnectionViewSet(viewsets.ModelViewSet):
         user = self.get_user()
         connection = get_object_or_404(Connection, second_user=user, id=request.data.get('id'), accepted=False)
         accepted = request.data.get('accepted', None)
+        new_level = request.data.get('level', None)
         if not accepted:
             return Response({'error': 'accepted is required'}, status=status.HTTP_400_BAD_REQUEST)
-        if accepted == 'true':
+        if not new_level:
+            return Response({'error': 'level is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if accepted == '1':
             connection.accepted = True
             connection.save()
 
-            new_connection = Connection(first_user=user, second_user=connection.first_user, level=connection.level,
+            new_connection = Connection(first_user=user, second_user=connection.first_user, level=new_level,
                                         accepted=True)
-            if 'level' in request.data:
-                new_connection.level = request.data['level']
             new_connection.save()
             return Response(status=status.HTTP_200_OK)
         else:

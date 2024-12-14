@@ -30,30 +30,40 @@ class ContentViewSet(viewsets.ModelViewSet):
         return get_object_or_404(CustomUser, id=self.request.user.id)
 
     def get_queryset(self):
-        hierarchy = {
-            'level_1': 1,
-            'level_2': 2,
-            'level_3': 3,
-            'public': 4,
-        }
+        user = self.get_user()
 
-        connections = Connection.objects.filter(
-            first_user=self.get_user(),
-            accepted=True
-        ).select_related('second_user')
+        # first level connections
+        first_level_connections = Connection.objects.filter(first_user=user,
+                                                            level=Connection.ConnectionLevel.level_1,
+                                                            accepted=True).values_list('second_user')
+        # second level connections
+        second_level_connections = Connection.objects.filter(first_user=user,
+                                                             level=Connection.ConnectionLevel.level_2,
+                                                             accepted=True).values_list('second_user')
+        # third level connections
+        third_level_connections = Connection.objects.filter(first_user=user,
+                                                            level=Connection.ConnectionLevel.level_3,
+                                                            accepted=True).values_list('second_user')
 
-        visible_contents = Content.objects.filter(
-            Q(circle='public') |  # Public contents are always visible
-            Q(
-                user__in=[conn.second_user for conn in connections],
-                circle__in=[
-                    circle for circle, level in hierarchy.items()
-                    if any(hierarchy[circle] <= hierarchy[conn.level] for conn in connections)
-                ]
-            )
-        )
+        # first level content
+        contents = Content.objects.filter(user__in=first_level_connections,
+                                          circle=Content.Circle.level_1,
+                                          is_active=True).distinct()
 
-        return visible_contents
+        # second level content
+        contents |= Content.objects.filter(Q(user__in=first_level_connections) | Q(user__in=second_level_connections),
+                                           circle=Content.Circle.level_2,
+                                           is_active=True).distinct()
+
+        # third level content
+        contents |= Content.objects.filter(Q(user__in=first_level_connections) | Q(user__in=second_level_connections) | Q(user__in=third_level_connections),
+                                           circle=Content.Circle.level_3,
+                                           is_active=True).distinct()
+
+        # public content
+        contents |= Content.objects.filter(circle=Content.Circle.public, is_active=True).distinct()
+        contents = contents.order_by('-created_at')
+        return contents
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

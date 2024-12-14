@@ -23,6 +23,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     posts = serializers.SerializerMethodField()
     tasks = serializers.SerializerMethodField()
     connected = serializers.SerializerMethodField()
+    request = serializers.SerializerMethodField()
 
     # city = CitySerializer(read_only=True)
     # city_id = serializers.PrimaryKeyRelatedField(
@@ -49,10 +50,18 @@ class ProfileSerializer(serializers.ModelSerializer):
                                              second_user=obj).exists()
         return False
 
+    def get_request(self, obj):
+        user = self.context.get('user', None)
+        if user:
+            return ConnectionSerializer(Connection.objects.filter(first_user=obj,
+                                                                  second_user=user,
+                                                                  accepted=False), many=True).data
+        return []
+
     class Meta:
         model = CustomUser
         fields = ['id', 'name', 'email', 'user_name', 'phone', 'image', 'cover', 'bio', 'gender', 'date_joint',
-                  'skills', 'credit', 'tasks', 'posts', 'connected']
+                  'skills', 'credit', 'tasks', 'posts', 'connected', 'request']
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
