@@ -68,8 +68,8 @@ class ContentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data,
                                          context={'user': self.get_user()})
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            content = serializer.save()
+            return Response({"id": content.id}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
@@ -229,7 +229,7 @@ class OfferViewSet(ContentViewSet):
 def calculate_score(task):
     if task.offer.content.category:
         category = task.offer.content.category
-        responsible = task.offer.user
+        responsible = CustomUser.objects.get(id=task.offer.user.id)
         skill, created = UserCategory.objects.get_or_create(category=category,
                                                             user=responsible)
         if skill.score == 0:
@@ -237,6 +237,12 @@ def calculate_score(task):
         else:
             skill.score = (float(skill.score) + float(task.score)) / 2
         skill.save()
+
+        if responsible.credit == 0:
+            responsible.credit = float(task.score)
+        else:
+            responsible.credit = (float(responsible.credit) + float(task.score)) / 2
+        responsible.save()
 
 
 class TaskViewSet(viewsets.ModelViewSet):
