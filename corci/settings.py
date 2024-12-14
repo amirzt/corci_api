@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
+
+import firebase_admin
 from decouple import config
+from firebase_admin import credentials
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -104,3 +107,11 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'Users.CustomUser'
+
+# firebase
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FIREBASE_SERVICE_ACCOUNT_PATH = os.path.join(BASE_DIR, 'firebase.json')
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT_PATH)
+    firebase_admin.initialize_app(cred)

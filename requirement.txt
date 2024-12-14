@@ -5,3 +5,4 @@ pillow
 requests
 fcm-django
 python-decouple
+firebase-admin
