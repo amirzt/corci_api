@@ -21,22 +21,23 @@ def send_notification(receiver, message, message_type, related_user=None, conten
 
 
 def send_firebase(receiver, title, message):
-    token = UserFCMToken.objects.filter(user=receiver).first().token
-    if token is None:
-        return
-
-    message = messaging.Message(
-        notification=messaging.Notification(
-            title=title,
-            body=message,
-        ),
-        token=receiver,
-    )
-
-    try:
-        response = messaging.send(message)
-        print("Successfully sent message:", response)
-        # return {"success": True, "message_id": response}
-    except Exception as e:
-        print("Error sending FCM notification:", str(e))
-        # return {"success": False, "error": str(e)}
+    # token = UserFCMToken.objects.filter(user=receiver)
+    # if not token.exists():
+    #     return
+    # fcm = token.first().token
+    #
+    # message = messaging.Message(
+    #     notification=messaging.Notification(
+    #         title=title,
+    #         body=message,
+    #     ),
+    #     token=receiver,
+    # )
+    #
+    # try:
+    #     response = messaging.send(message)
+    #     print("Successfully sent message:", response)
+    #     # return {"success": True, "message_id": response}
+    # except Exception as e:
+    #     print("Error sending FCM notification:", str(e))
+    #     # return {"success": False, "error": str(e)}
