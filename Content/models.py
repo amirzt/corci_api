@@ -107,6 +107,7 @@ class Task(models.Model):
     class Status(models.TextChoices):
         ongoing = 'ongoing', 'Ongoing'
         completed = 'completed', 'Completed'
+        finished = 'finished', 'finished'
         canceled_by_author = 'canceled_by_author', 'Canceled by author'
         canceled_buy_responsible = 'canceled_buy_responsible', 'Canceled by responsible'
 

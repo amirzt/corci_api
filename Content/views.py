@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Q, Count
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -294,8 +294,30 @@ class TaskViewSet(viewsets.ModelViewSet):
             task.status = new_status
             task.save()
 
-            if new_status == Task.Status.completed:
+            if new_status == Task.Status.finished:
                 calculate_score(task)
             return Response(status=status.HTTP_200_OK)
         else:
             return Response({'error': 'you can only update your own tasks'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def event(self, request):
+        user = self.get_user()
+
+        start_date = request.query_params.get('start_date', None)
+        end_date = request.query_params.get('end_date', None)
+        if not start_date or not end_date:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "please select start and end"})
+
+        tasks = Task.objects.filter(offer__user=user,
+                                    due_date__range=(start_date, end_date))
+        print(tasks)
+        task_counts = tasks.values('due_date').annotate(count=Count('id'))
+        print(task_counts)
+
+        task_count_dict = {
+            str(entry['due_date']): entry['count']
+            for entry in task_counts if entry['count'] > 0
+        }
+
+        return Response(data=task_count_dict, status=status.HTTP_200_OK)

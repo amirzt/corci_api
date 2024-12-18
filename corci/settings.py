@@ -6,6 +6,8 @@ from decouple import config
 from firebase_admin import credentials
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1000 * 1024 * 1024
+
 
 SECRET_KEY = config('SECRET_KEY')
 
@@ -107,11 +109,11 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'Users.CustomUser'
-
-# firebase
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FIREBASE_SERVICE_ACCOUNT_PATH = os.path.join(BASE_DIR, 'firebase.json')
-
-if not firebase_admin._apps:
-    cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT_PATH)
-    firebase_admin.initialize_app(cred)
+#
+# # firebase
+# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# FIREBASE_SERVICE_ACCOUNT_PATH = os.path.join(BASE_DIR, 'firebase.json')
+#
+# if not firebase_admin._apps:
+#     cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT_PATH)
+#     firebase_admin.initialize_app(cred)

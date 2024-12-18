@@ -97,7 +97,7 @@ class OfferSerializer(serializers.ModelSerializer):
 class AddOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offer
-        fields = ['content', 'description']
+        fields = ['content', 'description', 'due_date']
 
     def save(self, **kwargs):
         offer = Offer(**self.validated_data,
