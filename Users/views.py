@@ -291,8 +291,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             for ca in id_list:
                 category = get_object_or_404(Category, id=ca)
-                user_category = UserCategory(user=user, category=category)
-                user_category.save()
+                user_category, created = UserCategory.objects.get_or_create(user=user, category=category)
+                # user_category.save()
 
             return Response(status=status.HTTP_200_OK)
 
