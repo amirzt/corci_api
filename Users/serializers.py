@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from Content.models import Content, Task
+from notification.utils import send_notification
 from .models import CustomUser, City, Country, Connection, Category, UserCategory, Banner, HomeMessage, Version
 
 
@@ -47,16 +48,17 @@ class ProfileSerializer(serializers.ModelSerializer):
         user = self.context.get('user', None)
         if user:
             return Connection.objects.filter(first_user=user,
-                                             second_user=obj).exists()
+                                             second_user=obj,
+                                             accepted=True).exists()
         return False
 
     def get_request(self, obj):
         user = self.context.get('user', None)
         if user:
-            return ConnectionSerializer(Connection.objects.filter(first_user=obj,
-                                                                  second_user=user,
-                                                                  accepted=False), many=True).data
-        return []
+            return Connection.objects.filter(first_user=user,
+                                             second_user=obj,
+                                             accepted=False).exists()
+        return False
 
     class Meta:
         model = CustomUser
@@ -100,6 +102,12 @@ class AddConnectionSerializer(serializers.ModelSerializer):
         connection = Connection(first_user=self.context.get('user'),
                                 **self.validated_data)
         connection.save()
+
+        # send in app notif
+        send_notification(receiver=connection.second_user, related_user=connection.first_user,
+                          message_type='connection',
+                          message='')
+
         return connection
 
     def update(self, instance, validated_data):

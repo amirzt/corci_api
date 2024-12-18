@@ -1,23 +1,27 @@
-from Users.models import UserFCMToken
+# from Users.models import UserFCMToken
 from notification.models import UserNotification
 
-from firebase_admin import messaging
+# from firebase_admin import messaging
 
 
 def send_notification(receiver, message, message_type, related_user=None, content=None, offer=None):
-    if message_type == 'offer':
-        message = 'Sent an offer'
+    try:
+        if message_type == 'offer':
+            message = ' Sent an offer to you'
+        elif message_type == 'connection':
+            message = ' Sent you a connection request'
 
-    notif = UserNotification.objects.create(receiver=receiver, message=message)
-    if related_user:
-        notif.related_user = related_user
-    if content:
-        notif.content = content
-    if offer:
-        notif.offer = offer
-    notif.save()
-
-    send_firebase(receiver, "New Message", message)
+        notif = UserNotification.objects.create(receiver=receiver, message=message)
+        if related_user:
+            notif.related_user = related_user
+        if content:
+            notif.content = content
+        if offer:
+            notif.offer = offer
+        notif.save()
+    except:
+        pass
+    # send_firebase(receiver, "New Message", message)
 
 
 def send_firebase(receiver, title, message):

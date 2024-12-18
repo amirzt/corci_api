@@ -56,9 +56,11 @@ class ContentViewSet(viewsets.ModelViewSet):
                                            is_active=True).distinct()
 
         # third level content
-        contents |= Content.objects.filter(Q(user__in=first_level_connections) | Q(user__in=second_level_connections) | Q(user__in=third_level_connections),
-                                           circle=Content.Circle.level_3,
-                                           is_active=True).distinct()
+        contents |= Content.objects.filter(
+            Q(user__in=first_level_connections) | Q(user__in=second_level_connections) | Q(
+                user__in=third_level_connections),
+            circle=Content.Circle.level_3,
+            is_active=True).distinct()
 
         # public content
         contents |= Content.objects.filter(circle=Content.Circle.public, is_active=True).distinct()
@@ -202,6 +204,10 @@ class OfferViewSet(ContentViewSet):
                                      content=request.data['content']).count()
         if offer > 0:
             return Response(data={"message": "You have already sent your offer"}, status=status.HTTP_400_BAD_REQUEST)
+        user = self.get_user()
+        content = get_object_or_404(Content, id=request.data.get('content', 0))
+        if content.user.id == user.id:
+            return Response(data={"message": "You can not offer on your own post"}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(data=request.data,
                                          partial=True,
                                          context={'user': self.get_user()})
@@ -211,7 +217,8 @@ class OfferViewSet(ContentViewSet):
             send_message(sender=self.get_user(), receiver=offer.content.user, content=offer.description, offer=offer)
 
             # send in app notif
-            send_notification(receiver=offer.content.user, content=offer.content, message_type='offer', offer=offer,
+            send_notification(receiver=offer.content.user, related_user=offer.user, content=offer.content,
+                              message_type='offer', offer=offer,
                               message='')
 
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -309,11 +316,10 @@ class TaskViewSet(viewsets.ModelViewSet):
         if not start_date or not end_date:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "please select start and end"})
 
-        tasks = Task.objects.filter(offer__user=user,
-                                    due_date__range=(start_date, end_date))
-        print(tasks)
+        tasks = self.filter_queryset(self.get_queryset())
+
+        tasks = Task.objects.filter(due_date__range=(start_date, end_date))
         task_counts = tasks.values('due_date').annotate(count=Count('id'))
-        print(task_counts)
 
         task_count_dict = {
             str(entry['due_date']): entry['count']
