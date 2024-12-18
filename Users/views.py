@@ -144,6 +144,16 @@ class UsersViewSet(viewsets.ViewSet):
             'version': VersionSerializer(version).data,
         })
 
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def search(self, request):
+        query = request.query_params.get('query', None)
+        if not query:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "please enter the query"})
+        users_with_name = CustomUser.objects.filter(name__contains=query)
+        users_with_email = CustomUser.objects.filter(email__contains=query)
+        users = users_with_email | users_with_name
+        return Response(ProfileSerializer(users.distinct(), many=True).data)
+
 
 def get_mutual_connections(user, target):
     user_connections = Connection.objects.filter(
