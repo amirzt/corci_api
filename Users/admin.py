@@ -6,7 +6,6 @@ from Users.models import CustomUser, Country, City, Connection, UserCategory, Ca
 # Register your models here.
 admin.site.register(Country)
 admin.site.register(City)
-admin.site.register(CustomUser)
 admin.site.register(Connection)
 admin.site.register(UserCategory)
 admin.site.register(Category)
@@ -16,3 +15,9 @@ admin.site.register(Version)
 admin.site.register(UserFCMToken)
 admin.site.register(OTP)
 
+
+@admin.register(CustomUser)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ('email',)
+    search_fields = ('email',)
+    fields = ('email',)
