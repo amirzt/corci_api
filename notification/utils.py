@@ -21,6 +21,7 @@ def send_notification(receiver, message, message_type, related_user=None, conten
 
 
 def send_firebase(receiver, title, message):
+    pass
     # token = UserFCMToken.objects.filter(user=receiver)
     # if not token.exists():
     #     return
