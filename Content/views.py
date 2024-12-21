@@ -226,7 +226,7 @@ class OfferViewSet(ContentViewSet):
 
     def update(self, request, *args, **kwargs):
         offer = get_object_or_404(Offer, id=kwargs['pk'])
-        if offer.content.user == self.get_user():
+        if offer.content.user == self.get_user() or offer.user == self.get_user():
             new_status = request.data.get('status', None)
             if not new_status:
                 return Response({'error': 'you must specify status'}, status=status.HTTP_400_BAD_REQUEST)

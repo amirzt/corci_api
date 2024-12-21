@@ -80,3 +80,14 @@ class ChatViewSet(viewsets.ViewSet):
             total_unread_count += get_unread_message_count(user, chat)
 
         return Response({"unread_count": total_unread_count}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def get_chat(self, request):
+        user = self.get_user()
+        target = get_object_or_404(CustomUser, id=request.query_params.get("target"))
+
+        participant_ids = sorted([user.id, target.id])
+        unique_identifier = "_".join(map(str, participant_ids))
+
+        chat = get_object_or_404(Chat, unique_identifier=unique_identifier)
+        return Response(data={"id": chat.id})

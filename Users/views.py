@@ -195,13 +195,15 @@ class ConnectionViewSet(viewsets.ModelViewSet):
         elif category == 'my_connections':
             queryset = Connection.objects.filter(first_user=self.get_user(),
                                                  accepted=True)
-        else:
+        elif category == 'target':
             target_id = request.query_params.get('target', None)
             if not target_id:
                 return Response({'error': 'target is required'}, status=status.HTTP_400_BAD_REQUEST)
             target = get_object_or_404(CustomUser, id=target_id)
             queryset = Connection.objects.filter(first_user=target,
-                                                 accepted=False)
+                                                 accepted=True)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "category is not valid"})
 
         if 'level' in request.query_params:
             queryset = queryset.filter(level=request.query_params['level'])
@@ -277,6 +279,21 @@ class ConnectionViewSet(viewsets.ModelViewSet):
 
         connections = get_mutual_connections(user, target)
         return Response(ConnectionSerializer(connections, many=True).data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['delete'], permission_classes=[IsAuthenticated])
+    def unfollow(self, request):
+        user = self.get_user()
+        target = get_object_or_404(CustomUser, id=request.data.get('target'))
+        first_connection = Connection.objects.filter(first_user=user,
+                                                     second_user=target)
+        if first_connection.exists():
+            first_connection.delete()
+
+        second_connection = Connection.objects.filter(first_user=target,
+                                                      second_user=user)
+        if second_connection.exists():
+            second_connection.delete()
+        return Response(status=status.HTTP_200_OK)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
